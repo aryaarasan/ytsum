@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTDigest</title>
+  <meta name="description" content="Your personal AI-powered YouTube video digest" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+    :root {
+      --bg:           #0f0f0f;
+      --bg2:          #161616;
+      --bg3:          #1e1e1e;
+      --surface:      #242424;
+      --surface2:     #2c2c2c;
+      --border:       #2e2e2e;
+      --border2:      #3a3a3a;
+      --text:         #f0ede8;
+      --text2:        #a09d97;
+      --text3:        #6b6865;
+      --accent:       #ff4d1c;
+      --accent2:      #ff7a4d;
+      --accent-dim:   rgba(255, 77, 28, 0.12);
+      --accent-glow:  rgba(255, 77, 28, 0.06);
+      --green:        #22c55e;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body:    'DM Sans', sans-serif;
+      --radius:       10px;
+      --radius-lg:    16px;
+      --transition:   0.18s ease;
+    }
+
+    /* ─── RESET + BASE ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    img { display: block; }
+
+    /* ─── LAYOUT ─────────────────────────────────────────────────── */
+    .app-shell {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+      gap: 16px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 38px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .tagline {
+      font-size: 12px;
+      color: var(--text3);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text2);
+      font-size: 13px;
+      font-family: var(--font-body);
+      transition: all var(--transition);
+    }
+
+    .refresh-btn:hover {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border2);
+    }
+
+    .refresh-btn.spinning svg {
+      animation: spin 0.8s linear infinite;
+    }
+
+    .refresh-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* Status dot */
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+      flex-shrink: 0;
+    }
+
+    .status-dot.error { background: var(--accent); box-shadow: 0 0 6px rgba(255,77,28,0.5); }
+    .status-dot.loading { background: var(--text3); box-shadow: none; animation: pulse-dot 1s ease infinite; }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ─── FILTER BAR ─────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      font-weight: 500;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+
+    .chip {
+      padding: 5px 13px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 400;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text2);
+      transition: all var(--transition);
+      white-space: nowrap;
+      font-family: var(--font-body);
+    }
+
+    .chip:hover {
+      border-color: var(--text3);
+      color: var(--text);
+    }
+
+    .chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* ─── STATS BAR ──────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: 0.03em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+    }
+
+    /* ─── DATE DIVIDER ───────────────────────────────────────────── */
+    .date-group { margin-bottom: 32px; }
+
+    .date-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .date-label-text {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .date-label-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── VIDEO CARD ─────────────────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 12px;
+      transition: border-color var(--transition);
+    }
+
+    .card:hover { border-color: var(--border2); }
+    .card.expanded { border-color: var(--border2); }
+
+    /* Card top row: thumbnail + meta */
+    .card-top {
+      display: flex;
+      gap: 0;
+    }
+
+    /* Thumbnail */
+    .card-thumb-wrap {
+      flex-shrink: 0;
+      width: 168px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-thumb-wrap a {
+      display: block;
+      height: 100%;
+    }
+
+    .card-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      min-height: 100px;
+      transition: transform 0.3s ease;
+    }
+
+    .card-thumb-wrap:hover .card-thumb {
+      transform: scale(1.04);
+    }
+
+    /* Play overlay on thumbnail hover */
+    .thumb-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .card-thumb-wrap:hover .thumb-overlay { opacity: 1; }
+
+    .play-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .play-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: white;
+      margin-left: 2px;
+    }
+
+    /* Card meta — right of thumbnail */
+    .card-meta {
+      flex: 1;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .card-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .channel-badge {
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .card-date {
+      font-size: 11px;
+      color: var(--text3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Title — clickable, goes to YouTube */
+    .card-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color var(--transition);
+    }
+
+    .card-title:hover { color: var(--accent2); }
+
+    /* Expand button row */
+    .card-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+
+    .transcript-badge {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .transcript-badge.has { background: rgba(34,197,94,0.1); color: var(--green); }
+    .transcript-badge.no  { background: rgba(160,157,151,0.1); color: var(--text3); }
+
+    .expand-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text3);
+      font-family: var(--font-body);
+      padding: 4px 0;
+      transition: color var(--transition);
+    }
+
+    .expand-btn:hover { color: var(--text2); }
+
+    .expand-btn svg {
+      width: 14px;
+      height: 14px;
+      transition: transform var(--transition);
+      flex-shrink: 0;
+    }
+
+    .card.expanded .expand-btn svg { transform: rotate(180deg); }
+
+    /* ─── SUMMARY PANEL ──────────────────────────────────────────── */
+    .summary-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-top: 0px solid var(--border);
+    }
+
+    .card.expanded .summary-panel {
+      max-height: 600px;
+      border-top-width: 1px;
+    }
+
+    .summary-inner {
+      padding: 18px 18px 18px;
+    }
+
+    /* Short summary */
+    .short-summary {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      margin-bottom: 14px;
+    }
+
+    /* Detailed summary toggle */
+    .detail-toggle {
+      font-size: 12px;
+      color: var(--accent2);
+      font-family: var(--font-body);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 14px;
+      transition: color var(--transition);
+    }
+
+    .detail-toggle:hover { color: var(--accent); }
+
+    .detail-toggle svg {
+      width: 12px;
+      height: 12px;
+      transition: transform var(--transition);
+    }
+
+    .card.detail-open .detail-toggle svg { transform: rotate(180deg); }
+
+    /* Detailed summary */
+    .detailed-summary {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+    }
+
+    .card.detail-open .detailed-summary { max-height: 400px; }
+
+    .detailed-summary-inner {
+      font-size: 13.5px;
+      color: var(--text2);
+      line-height: 1.7;
+      padding: 14px 16px;
+      background: var(--bg3);
+      border-radius: var(--radius);
+      border-left: 2px solid var(--accent);
+      margin-bottom: 14px;
+    }
+
+    /* Watch button */
+    .watch-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      transition: background var(--transition), transform var(--transition);
+    }
+
+    .watch-btn:hover {
+      background: var(--accent2);
+      transform: translateY(-1px);
+    }
+
+    .watch-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* ─── LOADING STATE ──────────────────────────────────────────── */
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      gap: 16px;
+      color: var(--text3);
+    }
+
+    .loading-spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ─── ERROR STATE ────────────────────────────────────────────── */
+    .error-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text3);
+    }
+
+    .error-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .error-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+
+    .error-msg {
+      font-size: 13px;
+      color: var(--text3);
+      margin-bottom: 20px;
+    }
+
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text2);
+      font-size: 13px;
+      font-family: var(--font-body);
+      transition: all var(--transition);
+    }
+
+    .retry-btn:hover { background: var(--surface); color: var(--text); }
+
+    /* ─── EMPTY STATE ────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text3);
+    }
+
+    .empty-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      letter-spacing: 0.04em;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+
+    /* ─── LAST UPDATED ───────────────────────────────────────────── */
+    .last-updated {
+      font-size: 11px;
+      color: var(--text3);
+      text-align: center;
+      margin-top: 40px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── MOBILE ─────────────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      .app-shell { padding: 0 14px 60px; }
+      .logo { font-size: 30px; }
+      .tagline { display: none; }
+
+      .card-thumb-wrap {
+        width: 120px;
+      }
+
+      .card-title { font-size: 14px; }
+      .stats-bar { gap: 14px; }
+      .stat-value { font-size: 22px; }
+    }
+
+    /* ─── CARD ENTRANCE ANIMATION ────────────────────────────────── */
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      animation: cardIn 0.25s ease both;
+    }
+
+    /* stagger delay applied via JS */
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">YT<span>Digest</span></div>
+        <div class="tagline">AI-powered video feed</div>
+      </div>
+      <div class="header-right">
+        <div class="status-dot loading" id="status-dot"></div>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadFeed(true)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.8 0 3.4.87 4.4 2.2"/>
+            <path d="M10.5 2l2 2.5-2.5 1.5"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar" id="filter-bar">
+      <span class="filter-label">Channel</span>
+      <button class="chip active" data-channel="all" onclick="setFilter('all', this)">All</button>
+      <!-- Channel chips injected by JS -->
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar" id="stats-bar" style="display:none">
+      <div class="stat">
+        <span class="stat-value" id="stat-total">0</span>
+        <span class="stat-label">Videos</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value" id="stat-channels">0</span>
+        <span class="stat-label">Channels</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value" id="stat-days">7</span>
+        <span class="stat-label">Day window</span>
+      </div>
+    </div>
+
+    <!-- MAIN FEED -->
+    <main id="feed">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading digest...</div>
+      </div>
+    </main>
+
+    <div class="last-updated" id="last-updated"></div>
+
+  </div><!-- /app-shell -->
+
+  <script>
+    // =========================================================================
+    // CONFIGURATION — set your Sheet ID here
+    // =========================================================================
+    const SHEET_ID  = '1JqW83GoI4dk4NqCeO2shcYhk2OTt6LAOwB8Etz15xJY'; // ← replace with your Sheet ID
+    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+
+    // How long to cache data in sessionStorage (ms) — 15 minutes
+    const CACHE_TTL = 15 * 60 * 1000;
+
+    // Auto-refresh interval — 30 minutes
+    const AUTO_REFRESH_MS = 30 * 60 * 1000;
+
+    // =========================================================================
+    // STATE
+    // =========================================================================
+    let allArticles     = [];    // All parsed articles from the Sheet
+    let activeFilter    = 'all'; // Currently active channel filter
+    let lastLoadedAt    = null;  // Timestamp of last successful load
+    let autoRefreshTimer = null;
+    let lastVisibleAt   = Date.now();
+
+    // =========================================================================
+    // CSV FETCH + PARSE
+    // =========================================================================
+
+    /**
+     * Fetches and parses the Google Sheet CSV.
+     * Uses sessionStorage to avoid hammering the Sheets API.
+     * Pass force=true to bypass cache (e.g. on manual refresh).
+     */
+    async function loadFeed(force = false) {
+      setStatus('loading');
+      setRefreshSpinner(true);
+
+      // Check sessionStorage cache first
+      if (!force) {
+        const cached = getCache();
+        if (cached) {
+          renderAll(cached);
+          setRefreshSpinner(false);
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch(SHEET_URL + '&t=' + Date.now()); // cache-bust
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const csvText = await res.text();
+
+        const articles = parseCsv(csvText);
+        if (articles.length === 0) {
+          showEmpty();
+          setStatus('ok');
+          setRefreshSpinner(false);
+          return;
+        }
+
+        // Sort newest first
+        articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Save to cache
+        setCache(articles);
+
+        allArticles = articles;
+        lastLoadedAt = new Date();
+        renderAll(articles);
+        setStatus('ok');
+
+      } catch (err) {
+        console.error('Feed load error:', err);
+        showError(err.message);
+        setStatus('error');
+      }
+
+      setRefreshSpinner(false);
+    }
+
+    /**
+     * Parses CSV text into an array of article objects.
+     * Handles quoted fields that contain commas or newlines.
+     * Skips the header row (row 0).
+     */
+    function parseCsv(csvText) {
+      const rows = splitCsvRows(csvText);
+      if (rows.length < 2) return []; // Only header or empty
+
+      const articles = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const cols = parseCSVRow(rows[i]);
+        if (cols.length < 8) continue; // Skip malformed rows
+
+        // Column order matches Phase 3: Date|Channel|Title|VideoID|Thumbnail|ShortSummary|DetailedSummary|VideoURL
+        const article = {
+          date:            cols[0]?.trim() || '',
+          channel:         cols[1]?.trim() || '',
+          title:           cols[2]?.trim() || '',
+          videoId:         cols[3]?.trim() || '',
+          thumbnail:       cols[4]?.trim() || '',
+          shortSummary:    (cols[5]?.trim() || '').replace(/<br>/g, '\n'),
+          detailedSummary: (cols[6]?.trim() || '').replace(/<br>/g, '\n'),
+          videoUrl:        cols[7]?.trim() || '',
+        };
+
+        // Skip rows without a valid videoId
+        if (!article.videoId || !article.title) continue;
+
+        articles.push(article);
+      }
+
+      return articles;
+    }
+
+    /**
+     * Splits CSV text into rows, respecting quoted fields with embedded newlines.
+     */
+    function splitCsvRows(text) {
+      const rows = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+          // Handle escaped quotes ("")
+          if (inQuotes && text[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === '\n' && !inQuotes) {
+          rows.push(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      if (current) rows.push(current);
+      return rows.filter(r => r.trim().length > 0);
+    }
+
+    /**
+     * Parses a single CSV row into an array of field values.
+     * Handles quoted fields containing commas and escaped quotes.
+     */
+    function parseCSVRow(row) {
+      const fields = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < row.length; i++) {
+        const ch = row[i];
+        if (ch === '"') {
+          if (inQuotes && row[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === ',' && !inQuotes) {
+          fields.push(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      fields.push(current);
+      return fields;
+    }
+
+    // =========================================================================
+    // RENDER
+    // =========================================================================
+
+    /**
+     * Main render function — filters articles and renders them grouped by date.
+     */
+    function renderAll(articles) {
+      allArticles = articles;
+
+      // Build channel filter chips
+      buildFilterChips(articles);
+
+      // Apply active filter
+      const filtered = activeFilter === 'all'
+        ? articles
+        : articles.filter(a => a.channel === activeFilter);
+
+      // Update stats
+      updateStats(articles, filtered);
+
+      // Render
+      if (filtered.length === 0) {
+        showEmpty('No videos from this channel in the last 7 days.');
+        return;
+      }
+
+      // Group by date
+      const groups = groupByDate(filtered);
+      renderGroups(groups);
+
+      // Update last-updated footer
+      if (lastLoadedAt) {
+        document.getElementById('last-updated').textContent =
+          'Last updated ' + lastLoadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+
+    /**
+     * Groups articles by their date string.
+     * Returns an array of { dateLabel, articles } objects.
+     */
+    function groupByDate(articles) {
+      const map = new Map();
+      for (const a of articles) {
+        const label = formatDateLabel(a.date);
+        if (!map.has(label)) map.set(label, []);
+        map.get(label).push(a);
+      }
+      return Array.from(map.entries()).map(([dateLabel, articles]) => ({ dateLabel, articles }));
+    }
+
+    /**
+     * Renders all date groups into the feed container.
+     */
+    function renderGroups(groups) {
+      const feed = document.getElementById('feed');
+      feed.innerHTML = '';
+
+      let cardIndex = 0;
+
+      for (const group of groups) {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'date-group';
+
+        // Date divider
+        groupEl.innerHTML = `
+          <div class="date-label">
+            <span class="date-label-text">${group.dateLabel}</span>
+            <div class="date-label-line"></div>
+          </div>
+        `;
+
+        // Cards
+        for (const article of group.articles) {
+          const card = buildCard(article, cardIndex);
+          groupEl.appendChild(card);
+          cardIndex++;
+        }
+
+        feed.appendChild(groupEl);
+      }
+    }
+
+    /**
+     * Builds and returns a single video card DOM element.
+     */
+    function buildCard(article, index) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.animationDelay = Math.min(index * 40, 400) + 'ms';
+
+      const thumbHtml = article.thumbnail
+        ? `<img class="card-thumb" src="${escHtml(article.thumbnail)}" alt="${escHtml(article.title)}" loading="lazy" />`
+        : `<div class="card-thumb" style="background:var(--bg3);min-height:110px"></div>`;
+
+      const videoLinkAttrs = article.videoUrl
+        ? `href="${escHtml(article.videoUrl)}" target="_blank" rel="noopener"`
+        : '';
+
+      const shortSummaryHtml = article.shortSummary
+        ? article.shortSummary.replace(/\n/g, '<br>')
+        : 'No summary available.';
+
+      const detailedSummaryHtml = article.detailedSummary
+        ? article.detailedSummary.replace(/\n/g, '<br>')
+        : '';
+
+      card.innerHTML = `
+        <div class="card-top">
+
+          <div class="card-thumb-wrap">
+            <a ${videoLinkAttrs} tabindex="-1" aria-label="Watch on YouTube">
+              ${thumbHtml}
+              <div class="thumb-overlay">
+                <div class="play-icon">
+                  <svg viewBox="0 0 16 16"><polygon points="5,3 13,8 5,13"/></svg>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="card-meta">
+            <div class="card-top-row">
+              <span class="channel-badge">${escHtml(article.channel)}</span>
+              <span class="card-date">${formatShortDate(article.date)}</span>
+            </div>
+
+            <a class="card-title" ${videoLinkAttrs} title="${escHtml(article.title)}">
+              ${escHtml(article.title)}
+            </a>
+
+            <div class="card-action-row">
+              <button class="expand-btn" onclick="toggleExpand(this)" aria-expanded="false">
+                Summary
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6l4 4 4-4"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="summary-panel">
+          <div class="summary-inner">
+
+            <p class="short-summary">${shortSummaryHtml}</p>
+
+            ${detailedSummaryHtml ? `
+            <button class="detail-toggle" onclick="toggleDetail(this)">
+              Full breakdown
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </button>
+            <div class="detailed-summary">
+              <div class="detailed-summary-inner">${detailedSummaryHtml}</div>
+            </div>
+            ` : ''}
+
+            ${article.videoUrl ? `
+            <a class="watch-btn" href="${escHtml(article.videoUrl)}" target="_blank" rel="noopener">
+              <svg viewBox="0 0 16 16"><polygon points="5,3 13,8 5,13"/></svg>
+              Watch on YouTube
+            </a>` : ''}
+
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // =========================================================================
+    // INTERACTIONS
+    // =========================================================================
+
+    /**
+     * Toggles the summary panel open/closed for a card.
+     * Closes any previously open card first.
+     */
+    function toggleExpand(btn) {
+      const card = btn.closest('.card');
+      const isExpanded = card.classList.contains('expanded');
+
+      // Close all other open cards
+      document.querySelectorAll('.card.expanded').forEach(c => {
+        if (c !== card) {
+          c.classList.remove('expanded');
+          c.querySelector('.expand-btn')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      card.classList.toggle('expanded', !isExpanded);
+      btn.setAttribute('aria-expanded', String(!isExpanded));
+    }
+
+    /**
+     * Toggles the detailed summary section inside an expanded card.
+     */
+    function toggleDetail(btn) {
+      const card = btn.closest('.card');
+      card.classList.toggle('detail-open');
+    }
+
+    /**
+     * Sets the active channel filter and re-renders.
+     */
+    function setFilter(channel, chipEl) {
+      activeFilter = channel;
+
+      // Update chip styles
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+
+      renderAll(allArticles);
+    }
+
+    /**
+     * Builds channel filter chips from the unique channels in the data.
+     * Preserves the active filter selection.
+     */
+    function buildFilterChips(articles) {
+      const bar = document.getElementById('filter-bar');
+
+      // Get unique channels in order of appearance
+      const channels = [...new Set(articles.map(a => a.channel).filter(Boolean))];
+
+      // Remove old channel chips (keep "All" chip and label)
+      bar.querySelectorAll('.chip[data-channel]:not([data-channel="all"])').forEach(c => c.remove());
+
+      for (const channel of channels) {
+        const chip = document.createElement('button');
+        chip.className = 'chip' + (activeFilter === channel ? ' active' : '');
+        chip.dataset.channel = channel;
+        chip.textContent = channel;
+        chip.onclick = () => setFilter(channel, chip);
+        bar.appendChild(chip);
+      }
+    }
+
+    // =========================================================================
+    // STATS
+    // =========================================================================
+
+    function updateStats(allArticles, filteredArticles) {
+      const statsBar = document.getElementById('stats-bar');
+      statsBar.style.display = 'flex';
+
+      document.getElementById('stat-total').textContent = filteredArticles.length;
+      document.getElementById('stat-channels').textContent =
+        new Set(filteredArticles.map(a => a.channel)).size;
+    }
+
+    // =========================================================================
+    // STATES: loading / error / empty
+    // =========================================================================
+
+    function showError(msg) {
+      document.getElementById('feed').innerHTML = `
+        <div class="error-state">
+          <div class="error-icon">⚡</div>
+          <div class="error-title">Couldn't load feed</div>
+          <p class="error-msg">${escHtml(msg || 'Check that your Sheet is published as CSV.')}</p>
+          <button class="retry-btn" onclick="loadFeed(true)">
+            Try again
+          </button>
+        </div>`;
+      document.getElementById('stats-bar').style.display = 'none';
+    }
+
+    function showEmpty(msg) {
+      document.getElementById('feed').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-title">Nothing here yet</div>
+          <p>${escHtml(msg || 'No videos in the last 7 days. Check back soon.')}</p>
+        </div>`;
+    }
+
+    function setStatus(state) {
+      const dot = document.getElementById('status-dot');
+      dot.className = 'status-dot ' + state;
+    }
+
+    function setRefreshSpinner(on) {
+      document.getElementById('refresh-btn').classList.toggle('spinning', on);
+    }
+
+    // =========================================================================
+    // CACHE (sessionStorage)
+    // =========================================================================
+
+    function setCache(articles) {
+      try {
+        sessionStorage.setItem('ytdigest_data', JSON.stringify({
+          articles,
+          ts: Date.now(),
+        }));
+      } catch(e) { /* sessionStorage full or unavailable */ }
+    }
+
+    function getCache() {
+      try {
+        const raw = sessionStorage.getItem('ytdigest_data');
+        if (!raw) return null;
+        const { articles, ts } = JSON.parse(raw);
+        if (Date.now() - ts > CACHE_TTL) return null;
+        allArticles = articles;
+        lastLoadedAt = new Date(ts);
+        return articles;
+      } catch(e) { return null; }
+    }
+
+    // =========================================================================
+    // AUTO-REFRESH
+    // =========================================================================
+
+    // Refresh every 30 minutes while tab is open
+    function startAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(() => loadFeed(true), AUTO_REFRESH_MS);
+    }
+
+    // Refresh when user returns to tab after 15+ minutes away
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        const awayMs = Date.now() - lastVisibleAt;
+        if (awayMs > 15 * 60 * 1000) loadFeed(false);
+      } else {
+        lastVisibleAt = Date.now();
+      }
+    });
+
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatDateLabel(dateStr) {
+      if (!dateStr) return 'Unknown date';
+      const d = new Date(dateStr + 'T12:00:00'); // noon to avoid TZ shift
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      if (d.toDateString() === today.toDateString()) return 'Today';
+      if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+      return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+
+    function formatShortDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // =========================================================================
+    // SERVICE WORKER REGISTRATION
+    // =========================================================================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+
+    // =========================================================================
+    // BOOT
+    // =========================================================================
+    loadFeed();
+    startAutoRefresh();
+  </script>
+</body>
+</html>
