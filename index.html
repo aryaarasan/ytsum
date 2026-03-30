@@ -784,98 +784,108 @@
     }
 
     /**
-     * Parses CSV text into an array of article objects.
-     * Handles quoted fields that contain commas or newlines.
-     * Skips the header row (row 0).
-     */
-    function parseCsv(csvText) {
-      const rows = splitCsvRows(csvText);
-      if (rows.length < 2) return []; // Only header or empty
+ * Parses CSV text into article objects.
+ * Uses a regex-based RFC 4180 compliant parser — handles quoted fields
+ * containing commas, newlines, and escaped quotes correctly.
+ */
+function parseCsv(csvText) {
+  // Normalize line endings — \r\n and \r both become \n
+  const normalized = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-      const articles = [];
+  const rows = parseCsvToRows(normalized);
+  if (rows.length < 2) return [];
 
-      for (let i = 1; i < rows.length; i++) {
-        const cols = parseCSVRow(rows[i]);
-        if (cols.length < 8) continue; // Skip malformed rows
+  const articles = [];
 
-        // Column order matches Phase 3: Date|Channel|Title|VideoID|Thumbnail|ShortSummary|DetailedSummary|VideoURL
-        const article = {
-          date:            cols[0]?.trim() || '',
-          channel:         cols[1]?.trim() || '',
-          title:           cols[2]?.trim() || '',
-          videoId:         cols[3]?.trim() || '',
-          thumbnail:       cols[4]?.trim() || '',
-          shortSummary:    (cols[5]?.trim() || '').replace(/<br>/g, '\n'),
-          detailedSummary: (cols[6]?.trim() || '').replace(/<br>/g, '\n'),
-          videoUrl:        cols[7]?.trim() || '',
-        };
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i];
+    if (!cols || cols.length < 8) continue;
 
-        // Skip rows without a valid videoId
-        if (!article.videoId || !article.title) continue;
+    const article = {
+      date:            cols[0]?.trim() || '',
+      channel:         cols[1]?.trim() || '',
+      title:           cols[2]?.trim() || '',
+      videoId:         cols[3]?.trim() || '',
+      thumbnail:       cols[4]?.trim() || '',
+      shortSummary:    (cols[5]?.trim() || '').replace(/<br>/g, '\n'),
+      detailedSummary: (cols[6]?.trim() || '').replace(/<br>/g, '\n'),
+      videoUrl:        cols[7]?.trim() || '',
+    };
 
-        articles.push(article);
-      }
+    if (!article.videoId || !article.title) continue;
+    articles.push(article);
+  }
 
-      return articles;
-    }
+  return articles;
+}
 
-    /**
-     * Splits CSV text into rows, respecting quoted fields with embedded newlines.
-     */
-    function splitCsvRows(text) {
-      const rows = [];
-      let current = '';
-      let inQuotes = false;
+/**
+ * Parses full CSV text into a 2D array of rows × fields.
+ * RFC 4180 compliant: handles quoted fields with commas,
+ * embedded newlines inside quotes, and escaped "" double quotes.
+ */
+function parseCsvToRows(text) {
+  const rows = [];
+  let row = [];
+  let i = 0;
 
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (ch === '"') {
-          // Handle escaped quotes ("")
-          if (inQuotes && text[i + 1] === '"') {
-            current += '"';
-            i++;
+  while (i < text.length) {
+    // --- Quoted field ---
+    if (text[i] === '"') {
+      let field = '';
+      i++; // skip opening quote
+
+      while (i < text.length) {
+        if (text[i] === '"') {
+          if (text[i + 1] === '"') {
+            // Escaped quote "" → literal "
+            field += '"';
+            i += 2;
           } else {
-            inQuotes = !inQuotes;
+            // Closing quote
+            i++;
+            break;
           }
-        } else if (ch === '\n' && !inQuotes) {
-          rows.push(current);
-          current = '';
         } else {
-          current += ch;
+          field += text[i];
+          i++;
         }
       }
-      if (current) rows.push(current);
-      return rows.filter(r => r.trim().length > 0);
-    }
 
-    /**
-     * Parses a single CSV row into an array of field values.
-     * Handles quoted fields containing commas and escaped quotes.
-     */
-    function parseCSVRow(row) {
-      const fields = [];
-      let current = '';
-      let inQuotes = false;
+      row.push(field);
 
-      for (let i = 0; i < row.length; i++) {
-        const ch = row[i];
-        if (ch === '"') {
-          if (inQuotes && row[i + 1] === '"') {
-            current += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (ch === ',' && !inQuotes) {
-          fields.push(current);
-          current = '';
-        } else {
-          current += ch;
-        }
+      // After closing quote: expect comma, \n, or end of text
+      if (text[i] === ',') i++;
+
+    // --- Unquoted field ---
+    } else {
+      let field = '';
+
+      while (i < text.length && text[i] !== ',' && text[i] !== '\n') {
+        field += text[i];
+        i++;
       }
-      fields.push(current);
-      return fields;
+
+      row.push(field);
+
+      if (text[i] === ',') i++;
     }
+
+    // --- End of row ---
+    if (text[i] === '\n' || i >= text.length) {
+      if (i < text.length) i++; // skip \n
+      if (row.length > 0) {
+        rows.push(row);
+        row = [];
+      }
+    }
+  }
+
+  // Push any trailing row
+  if (row.length > 0) rows.push(row);
+
+  return rows;
+}
 
     // =========================================================================
     // RENDER
