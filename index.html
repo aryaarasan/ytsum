@@ -401,15 +401,7 @@
 
         articles.push({
           date:            getDate(0),
-          channel:         get(1),
-          title:           title,
-          videoId:         videoId,
-          thumbnail:       get(4),
-          shortSummary:    get(5).replace(/<br>/gi, '\n'),
-          detailedSummary: get(6).replace(/<br>/gi, '\n'),
-          videoUrl:        get(7),
-        });
-	// Google returns date cells as "Date(2026,2,29)" — month is 0-indexed
+			// Google returns date cells as "Date(2026,2,29)" — month is 0-indexed
 // We convert to "YYYY-MM-DD" string for consistent display and sorting
 const getDate = (i) => {
   const cell = cols[i];
@@ -430,6 +422,14 @@ const getDate = (i) => {
   if (cell.f) return cell.f;
   return raw;
 };
+          channel:         get(1),
+          title:           title,
+          videoId:         videoId,
+          thumbnail:       get(4),
+          shortSummary:    get(5).replace(/<br>/gi, '\n'),
+          detailedSummary: get(6).replace(/<br>/gi, '\n'),
+          videoUrl:        get(7),
+        });
       }
 
       return articles;
