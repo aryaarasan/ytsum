@@ -379,7 +379,23 @@
         console.error('JSON parse failed:', e.message);
         return [];
       }
-	// Google returns date cells as "Date(2026,2,29)" — month is 0-indexed
+
+      const rows = data?.table?.rows;
+      if (!rows || rows.length === 0) return [];
+
+      const articles = [];
+
+      for (const row of rows) {
+        const cols = row.c || [];
+
+        // Safely get cell value — Google returns null for empty cells
+        const get = (i) => {
+          const cell = cols[i];
+          if (!cell || cell.v === null || cell.v === undefined) return '';
+          return String(cell.v).trim();
+        };
+		  
+		// Google returns date cells as "Date(2026,2,29)" — month is 0-indexed
 // We convert to "YYYY-MM-DD" string for consistent display and sorting
 const getDate = (i) => {
   const cell = cols[i];
@@ -400,21 +416,6 @@ const getDate = (i) => {
   if (cell.f) return cell.f;
   return raw;
 };
-
-      const rows = data?.table?.rows;
-      if (!rows || rows.length === 0) return [];
-
-      const articles = [];
-
-      for (const row of rows) {
-        const cols = row.c || [];
-
-        // Safely get cell value — Google returns null for empty cells
-        const get = (i) => {
-          const cell = cols[i];
-          if (!cell || cell.v === null || cell.v === undefined) return '';
-          return String(cell.v).trim();
-        };
 
         const videoId = get(3);
         const title   = get(2);
